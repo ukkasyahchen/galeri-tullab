@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const $ = id => document.getElementById(id);
   const gallery = $('gallery');
-  const q = $('q'), qx = $('qx'), sorts = $('sorts');
+  const q = $('q'), qx = $('qx'), sorts = $('sorts'), fmts = $('fmts');
   const empty = $('empty'), emptyQ = $('empty-q'), emptyReset = $('empty-reset');
 
   const lb = $('lb'), lbBd = $('lb-bd'), lbImg = $('lb-img'), lbNo = $('lb-no'),
@@ -11,11 +11,16 @@ document.addEventListener('DOMContentLoaded', () => {
         lbDl = $('lb-dl'), lbMeta = $('lb-meta');
 
   let sort = 'n';
+  let fmt = 'png';
   let query = '';
   let idx = 0;
 
   /* ── helpers ─────────────────────────────────────────── */
   const pad = n => String(n).padStart(2, '0');
+  const fmtSrc = d => fmt === 'jpg' ? `jpg/${pad(d.n)}.jpg` : d.src;
+  const fmtName = d => fmt === 'jpg'
+    ? (d.orig || `${pad(d.n)}.png`).replace(/\.png$/i, '.jpg')
+    : (d.orig || `${pad(d.n)}.png`);
 
   function matches(item, qq){
     if(!qq) return true;
@@ -89,7 +94,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if(isEmpty) emptyQ.textContent=qq?`“${qq}”`:'';
     qx.hidden=!query;
     const meta=$('stat-count');
-    if(meta) meta.textContent=qq?`${list.length} dari ${DATA.length} nama`:`${DATA.length} nama · PNG transparan`;
+    if(meta) meta.textContent=qq?`${list.length} dari ${DATA.length} nama`:`${DATA.length} nama · ${fmt==='jpg'?'JPG 1080 × 1080':'PNG transparan'}`;
   }
 
   function rerender(){ build(); apply(); }
@@ -112,11 +117,23 @@ document.addEventListener('DOMContentLoaded', () => {
     sort=b.dataset.sort; setSortBtns(); apply();
   });
 
-  /* ── download (original, uncompressed) ───────────────── */
+  function setFmtBtns(){
+    fmts.querySelectorAll('.fmts__b').forEach(b=>{
+      const on=b.dataset.fmt===fmt;
+      b.classList.toggle('active',on);
+      b.setAttribute('aria-selected',on?'true':'false');
+    });
+  }
+  fmts.addEventListener('click',e=>{
+    const b=e.target.closest('.fmts__b'); if(!b) return;
+    fmt=b.dataset.fmt; setFmtBtns(); apply();
+  });
+
+  /* ── download (original PNG / 1080² JPG) ─────────────── */
   function download(d){
     const a=document.createElement('a');
-    a.href=d.src;
-    a.download=d.orig||(`${pad(d.n)}.png`);
+    a.href=fmtSrc(d);
+    a.download=fmtName(d);
     document.body.appendChild(a); a.click(); a.remove();
   }
 
@@ -127,10 +144,13 @@ document.addEventListener('DOMContentLoaded', () => {
   function update(){
     const l=list(); const d=l[idx];
     if(!d) return closeLb();
-    lbImg.src=d.src; lbImg.alt='Kaligrafi '+d.name;
+    lbImg.src=fmtSrc(d); lbImg.alt='Kaligrafi '+d.name;
     lbNo.textContent='#'+pad(d.n);
     lbName.textContent=d.name;
-    lbMeta.textContent=`PNG · ${d.w} × ${d.h} px · latar transparan`;
+    lbMeta.textContent=fmt==='jpg'
+      ? 'JPG · 1080 × 1080 px · latar putih'
+      : `PNG · ${d.w} × ${d.h} px · latar transparan`;
+    lbDl.textContent=fmt==='jpg'?'Unduh JPG':'Unduh PNG';
     lbDl.onclick=()=>download(d);
   }
   function next(){ const l=list(); if(!l.length)return; idx=(idx+1)%l.length; update(); }
@@ -151,5 +171,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   /* ── init ────────────────────────────────────────────── */
   setSortBtns();
+  setFmtBtns();
   rerender();
 });
